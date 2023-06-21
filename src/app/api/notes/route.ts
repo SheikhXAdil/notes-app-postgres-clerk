@@ -1,19 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
+import { headers } from 'next/headers'
 import { sql } from "@vercel/postgres";
 import { db, Note, newNote, notesTable } from "@/lib/drizzle";
 import { eq } from 'drizzle-orm';
+import { v4 as uuidv4 } from 'uuid';
 
 
 export async function GET(request: NextRequest) {
 
-    try {
-        await sql`CREATE TABLE IF NOT EXISTS Notes(id serial, Title varchar(255), Note text)`
+    const headerList = headers()
+    const userid = headerList.get("userid")
 
-        const res: Note[] = await db.select().from(notesTable).execute()
-        return NextResponse.json({ data: res })
+    try {
+        await sql`CREATE TABLE IF NOT EXISTS Notes(id varchar(255), Title varchar(255), Note text, userid varchar(255))`
+
+        if (userid) {
+            const res: Note[] = await db.select().from(notesTable).where(eq(notesTable.userid, userid)).execute()
+            return NextResponse.json({ data: res })
+        } else {
+            return NextResponse.json("Not Authorized", { status: 401 })
+        }
     } catch (error) {
         console.log((error as { message: string }).message)
-        return NextResponse.json("Something Went Wrong")
+        return NextResponse.json("Something Went Wrong", { status: 500 })
     }
 
 }
@@ -23,15 +32,21 @@ export async function POST(request: NextRequest) {
     const req: newNote = await request.json()
 
     try {
-        if (req.title && req.note) {
-            const res = await db.insert(notesTable).values({
-                title: req.title,
-                note: req.note
-            }).returning().execute()
+        if (req.userid) {
+            if ((req.title && req.note)) {
+                const res = await db.insert(notesTable).values({
+                    id: uuidv4(),
+                    title: req.title,
+                    note: req.note,
+                    userid: req.userid
+                }).returning().execute()
 
-            return NextResponse.json({ message: "Data Added Successfully", data: res })
+                return NextResponse.json({ message: "Data Added Successfully", data: res })
+            } else {
+                throw new Error("Title and Task Fields are required")
+            }
         } else {
-            throw new Error("Title and Task Fields are required")
+            return NextResponse.json("Not Authorized", { status: 401 })
         }
 
     } catch (error) {
@@ -41,7 +56,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-    const reqId = Number(request.nextUrl.searchParams.get("id"))
+    const reqId = request.nextUrl.searchParams.get("id")
     try {
         if (reqId) {
             const res = await db.delete(notesTable).where(eq(notesTable.id, reqId)).returning().execute()
@@ -56,7 +71,7 @@ export async function DELETE(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
-    const reqId = Number(request.nextUrl.searchParams.get("id"))
+    const reqId = request.nextUrl.searchParams.get("id")
     const req: newNote = await request.json()
 
     try {

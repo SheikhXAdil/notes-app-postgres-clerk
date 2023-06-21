@@ -1,5 +1,7 @@
+import { Suspense } from 'react'
 import Header from "@/Sections/Header";
 import Notes from "@/Sections/Notes";
+import Spinner from '@/components/Spinner';
 
 export default function Home() {
   return (
@@ -9,7 +11,10 @@ export default function Home() {
 
         <h1 className="font-bold text-4xl md:text-5xl">Your Notes</h1>
 
-        <Notes />
+        <Suspense fallback={<Spinner />}>
+          <Notes />
+        </Suspense>
+
       </main>
     </>
   )

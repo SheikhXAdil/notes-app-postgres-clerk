@@ -1,5 +1,6 @@
 import './globals.css'
 import { Inter } from 'next/font/google'
+import { ClerkProvider, SignedIn } from '@clerk/nextjs'
 import AddNote from "@/components/AddNote";
 
 
@@ -16,11 +17,16 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
-        {children}
-        <AddNote />
-      </body>
-    </html>
+    <ClerkProvider>
+      <html lang="en">
+        <body className={inter.className}>
+          {children}
+
+          <SignedIn>
+            <AddNote />
+          </SignedIn>
+        </body>
+      </html>
+    </ClerkProvider>
   )
 }
